@@ -3,7 +3,7 @@ MIT License
 Copyright (C) 2022 Nádas András <andrew.reeds.mpg@gmail.com>
 
 Author: Andrew Reeds <andrew.reeds.mpg@gmail.com>
-URL: https://github.com/coddra/GStonk
+URL: https://github.com/coddra/4theme
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
 
