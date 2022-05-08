@@ -1,0 +1,3 @@
+[submodule "mcx"]
+	path = mcx
+	url = https://github.com/coddra/mcx
