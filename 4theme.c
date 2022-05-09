@@ -152,7 +152,7 @@ int main(int argc, char** argv) {
     string path = sstr(argv[1]);
     assert(fileExists(path), "File '%s' does not exist", argv[1]);
     list(var) theme = parseTheme(preprocess(splitR(readAllText(path), '\n'), true));
-    list(string) themers = listFiles(sstr("/home/coddra/.config/4theme/"), DT_REG);
+    list(string) themers = listFiles(realPath(sstr("~/.config/4theme/")), P_REG | P_FULL);
     assert(themers.len > 0, "No themer themers found");
     for (u i = 0; i < themers.len; i++)
         doit(parseThemer(preprocess(splitR(readAllText(themers.items[i]), '\n'), false), theme), theme);
