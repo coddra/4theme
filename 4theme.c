@@ -34,7 +34,6 @@ typedef struct {
 list(string) preprocess(list(string) file, bool theme) {
     for (u i = 0; i < file.len && (theme || !stringStartsWith(file.items[i], str("rules:"))); i++)
         if (file.items[i].items[0] == '%') stringListRemove(&file, i--);
-    for (u i = file.len; i > 0 && file.items[i - 1].len == 0; i--) stringListRemove(&file, i - 1);
     return file;
 }
 var parseVar(string line) {
@@ -136,6 +135,7 @@ void doit(themer themer, list(var) theme) {
     var tmp = { str("target"), {0} };
     string path = realPathR(themer.vars.items[varListPos(themer.vars, tmp)].value, str("~/.config/4theme"));
     list(string) file = split(readAllText(path), '\n');
+    for (u i = file.len; i > 0 && file.items[i - 1].len == 0; i--) stringListRemove(&file, i - 1);
     list(string) out = {0};
     for (u i = 0; i < file.len; i++)
         stringListAdd(&out, apply(file.items[i], i, themer, theme));
