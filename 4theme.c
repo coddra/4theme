@@ -34,6 +34,7 @@ typedef struct {
 list(string) preprocess(list(string) file, bool theme) {
     for (u i = 0; i < file.len && (theme || !stringStartsWith(file.items[i], sstr("rules:"))); i++)
         if (file.items[i].items[0] == '%') stringListRemove(&file, i--);
+    for (u i = file.len; i > 0 && file.items[i - 1].len == 0; i--) stringListRemove(&file, i - 1);
     return file;
 }
 var parseVar(string line) {
@@ -97,10 +98,10 @@ string apply(string line, u index, themer themer, list(var) theme) {
         string res = {0};
         u c = 0, j = 0;
         while (j < themer.rules.items[i].sus.len && stringRangeCompare(line, c, themer.rules.items[i].sus.items[j].s.len, themer.rules.items[i].sus.items[j].s) == 0) {
-            stringAddRange(&res, themer.rules.items[i].sus.items[j].s);
+            concat(&res, themer.rules.items[i].sus.items[j].s);
             if (themer.rules.items[i].sus.items[j].u < themer.vars.len)
-                stringAddRange(&res, themer.vars.items[themer.rules.items[i].sus.items[j].u].value);
-            else stringAddRange(&res, theme.items[themer.rules.items[i].sus.items[j].u - themer.vars.len].value);
+                concat(&res, themer.vars.items[themer.rules.items[i].sus.items[j].u].value);
+            else concat(&res, theme.items[themer.rules.items[i].sus.items[j].u - themer.vars.len].value);
             c += themer.rules.items[i].sus.items[j].s.len;
             if (++j < themer.rules.items[i].sus.len)
                 for (; c <= line.len - themer.rules.items[i].sus.items[j].s.len &&
@@ -112,7 +113,7 @@ string apply(string line, u index, themer themer, list(var) theme) {
                    stringRangeCompare(line, c, themer.rules.items[i].tail.len, themer.rules.items[i].tail) != 0;
                  c++);//FIXME: every time I type this, one little cat dies
             if (c <= line.len - themer.rules.items[i].tail.len) {
-                stringAddRange(&res, themer.rules.items[i].tail);
+                concat(&res, themer.rules.items[i].tail);
                 themer.rules.items[i].applied = index;
                 return res;
             }
@@ -123,24 +124,33 @@ string apply(string line, u index, themer themer, list(var) theme) {
 string compile(rule rule, themer themer, list(var) theme) {
     string res = {0};
     for (u i = 0; i < rule.sus.len; i++) {
-        stringAddRange(&res, rule.sus.items[i].s);
+        concat(&res, rule.sus.items[i].s);
         if (rule.sus.items[i].u < themer.vars.len)
-            stringAddRange(&res, themer.vars.items[rule.sus.items[i].u].value);
-        else stringAddRange(&res, theme.items[rule.sus.items[i].u - themer.vars.len].value);
+            concat(&res, themer.vars.items[rule.sus.items[i].u].value);
+        else concat(&res, theme.items[rule.sus.items[i].u - themer.vars.len].value);
     }
-    stringAddRange(&res, rule.tail);
+    concat(&res, rule.tail);
     return res;
 }
 void doit(themer themer, list(var) theme) {
     var tmp = { sstr("target"), {0} };
-    string path = themer.vars.items[varListPos(themer.vars, tmp)].value;
+    string path = realPathR(themer.vars.items[varListPos(themer.vars, tmp)].value, sstr("~/.config/4theme"));
     list(string) file = split(readAllText(path), '\n');
     list(string) out = {0};
     for (u i = 0; i < file.len; i++)
         stringListAdd(&out, apply(file.items[i], i, themer, theme));
     for (u i = 0; i < themer.rules.len; i++)
         if (themer.rules.items[i].applied == max(u)) {
-            themer.rules.items[i].applied = i == 0 ? out.len : themer.rules.items[i - 1].applied + 1;
+            if (i == 0) {
+                u j = 0; for (; j < themer.rules.len && themer.rules.items[j].applied == max(u); j++);
+                if (j == themer.rules.len)
+                    themer.rules.items[i].applied = out.len;
+                else {
+                    themer.rules.items[i].applied = themer.rules.items[j].applied;
+                    for (; j < themer.rules.len; j++)
+                        if (themer.rules.items[j].applied != max(u)) themer.rules.items[j].applied++;
+                }
+            } else themer.rules.items[i].applied = themer.rules.items[i - 1].applied + 1;
             stringListInsert(&out, compile(themer.rules.items[i], themer, theme), themer.rules.items[i].applied);
         }
     writeAllText(path, joinC(out, '\n'));
