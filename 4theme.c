@@ -32,7 +32,7 @@ typedef struct {
 } themer;
 
 list(string) preprocess(list(string) file, bool theme) {
-    for (u i = 0; i < file.len && (theme || !stringStartsWith(file.items[i], sstr("rules:"))); i++)
+    for (u i = 0; i < file.len && (theme || !stringStartsWith(file.items[i], str("rules:"))); i++)
         if (file.items[i].items[0] == '%') stringListRemove(&file, i--);
     for (u i = file.len; i > 0 && file.items[i - 1].len == 0; i--) stringListRemove(&file, i - 1);
     return file;
@@ -79,13 +79,13 @@ themer parseThemer(list(string) file, list(var) theme) {
     if (file.len == 0) return res;
     var v = parseVar(file.items[0]);
     u i = 0;
-    while (i < file.len && !stringEquals(v.name, sstr("rules"))) {
+    while (i < file.len && !stringEquals(v.name, str("rules"))) {
         assert(!varListContains(res.vars, v), "A symbol with name '%s' is already specified", cptr(v.name));
         varListAdd(&res.vars, v);
         if (++i < file.len) v = parseVar(file.items[i]);
     }
-    assert(stringEquals(v.name, sstr("rules")), "Themer specifies no rules");
-    v.name = sstr("target");
+    assert(stringEquals(v.name, str("rules")), "Themer specifies no rules");
+    v.name = str("target");
     u p = varListPos(res.vars, v);
     assert(p < res.vars.len, "Themer specifies no target");
     assert(fileExists(res.vars.items[p].value), "Themer target '%s' does not exist", cptr(res.vars.items[p].value));
@@ -133,8 +133,8 @@ string compile(rule rule, themer themer, list(var) theme) {
     return res;
 }
 void doit(themer themer, list(var) theme) {
-    var tmp = { sstr("target"), {0} };
-    string path = realPathR(themer.vars.items[varListPos(themer.vars, tmp)].value, sstr("~/.config/4theme"));
+    var tmp = { str("target"), {0} };
+    string path = realPathR(themer.vars.items[varListPos(themer.vars, tmp)].value, str("~/.config/4theme"));
     list(string) file = split(readAllText(path), '\n');
     list(string) out = {0};
     for (u i = 0; i < file.len; i++)
@@ -150,7 +150,11 @@ void doit(themer themer, list(var) theme) {
                     for (; j < themer.rules.len; j++)
                         if (themer.rules.items[j].applied != max(u)) themer.rules.items[j].applied++;
                 }
-            } else themer.rules.items[i].applied = themer.rules.items[i - 1].applied + 1;
+            } else {
+                themer.rules.items[i].applied = themer.rules.items[i - 1].applied + 1;
+                for (u j = i + 1; j < themer.rules.len; j++)
+                    if (themer.rules.items[j].applied != max(u)) themer.rules.items[j].applied++;
+            }
             stringListInsert(&out, compile(themer.rules.items[i], themer, theme), themer.rules.items[i].applied);
         }
     writeAllText(path, joinC(out, '\n'));
@@ -160,12 +164,12 @@ int main(int argc, char** argv) {
     init(MCX);
     assert(argc >= 2, "No theme provided");
     string path = str(argv[1]);
-    concat(stringInsertRange(&path, sstr("~/.config/4theme/"), 0), sstr(".theme"));
+    concat(stringInsertRange(&path, str("~/.config/4theme/"), 0), str(".theme"));
     assert(fileExists(path), "Theme '%s' not found", argv[1]);
     list(var) theme = parseTheme(preprocess(splitR(readAllText(path), '\n'), true));
-    list(string) themers = listFiles(realPath(sstr("~/.config/4theme/")), P_REG | P_FULL);
+    list(string) themers = listFiles(realPath(str("~/.config/4theme/")), P_REG | P_FULL);
     for (u i = 0; i < themers.len; i++)
-        if (!stringEndsWith(themers.items[i], sstr(".themer")))
+        if (!stringEndsWith(themers.items[i], str(".themer")))
             stringListRemove(&themers, i--);
     assert(themers.len > 0, "No themers found");
     for (u i = 0; i < themers.len; i++)
