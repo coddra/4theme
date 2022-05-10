@@ -32,7 +32,7 @@ typedef struct {
 } themer;
 
 list(string) preprocess(list(string) file, bool theme) {
-    for (u i = 0; i < file.len && (theme || !stringStartsWith(file.items[i], str("rules:"))); i++)
+    for (u i = 0; i < file.len && (theme || !stringStartsWith(file.items[i], str("config:"))); i++)
         if (file.items[i].items[0] == '%') stringListRemove(&file, i--);
     return file;
 }
@@ -78,12 +78,12 @@ themer parseThemer(list(string) file, list(var) theme) {
     if (file.len == 0) return res;
     var v = parseVar(file.items[0]);
     u i = 0;
-    while (i < file.len && !stringEquals(v.name, str("rules"))) {
+    while (i < file.len && !stringEquals(v.name, str("config"))) {
         assert(!varListContains(res.vars, v), "A symbol with name '%s' is already specified", cptr(v.name));
         varListAdd(&res.vars, v);
         if (++i < file.len) v = parseVar(file.items[i]);
     }
-    assert(stringEquals(v.name, str("rules")), "Themer specifies no rules");
+    assert(stringEquals(v.name, str("config")), "Themer specifies no config");
     v.name = str("target");
     u p = varListPos(res.vars, v);
     assert(p < res.vars.len, "Themer specifies no target");
@@ -93,7 +93,7 @@ themer parseThemer(list(string) file, list(var) theme) {
 }
 string apply(string line, u index, themer themer, list(var) theme) {
     for (u i = 0; i < themer.rules.len; i++) {
-        if (!stringEndsWith(line, themer.rules.items[i].tail)) continue;
+        if (themer.rules.items[i].applied != max(u) || !stringEndsWith(line, themer.rules.items[i].tail)) continue;
         string res = {0};
         u c = 0, j = 0;
         while (j < themer.rules.items[i].sus.len && stringRangeCompare(line, c, themer.rules.items[i].sus.items[j].s.len, themer.rules.items[i].sus.items[j].s) == 0) {
@@ -137,8 +137,7 @@ void doit(themer themer, list(var) theme) {
     list(string) file = split(readAllText(path), '\n');
     for (u i = file.len; i > 0 && file.items[i - 1].len == 0; i--) stringListRemove(&file, i - 1);
     list(string) out = {0};
-    for (u i = 0; i < file.len; i++)
-        stringListAdd(&out, apply(file.items[i], i, themer, theme));
+    for (u i = 0; i < file.len; i++) stringListAdd(&out, apply(file.items[i], i, themer, theme));
     for (u i = 0; i < themer.rules.len; i++)
         if (themer.rules.items[i].applied == max(u)) {
             if (i == 0) {
@@ -158,10 +157,12 @@ void doit(themer themer, list(var) theme) {
             stringListInsert(&out, compile(themer.rules.items[i], themer, theme), themer.rules.items[i].applied);
         }
     writeAllText(path, joinC(out, '\n'));
+    tmp.name = str("update");
+    u pos = varListPos(themer.vars, tmp);
+    if (pos < themer.vars.len) system(cptr(themer.vars.items[varListPos(themer.vars, tmp)].value));
 }
 
 int main(int argc, char** argv) {
-    init(MCX);
     assert(argc >= 2, "No theme provided");
     string path = str(argv[1]);
     concat(stringInsertRange(&path, str("~/.config/4theme/"), 0), str(".theme"));
@@ -169,8 +170,7 @@ int main(int argc, char** argv) {
     list(var) theme = parseTheme(preprocess(splitR(readAllText(path), '\n'), true));
     list(string) themers = listFiles(realPath(str("~/.config/4theme/")), P_REG | P_FULL);
     for (u i = 0; i < themers.len; i++)
-        if (!stringEndsWith(themers.items[i], str(".themer")))
-            stringListRemove(&themers, i--);
+        if (!stringEndsWith(themers.items[i], str(".themer"))) stringListRemove(&themers, i--);
     assert(themers.len > 0, "No themers found");
     for (u i = 0; i < themers.len; i++)
         doit(parseThemer(preprocess(splitR(readAllText(themers.items[i]), '\n'), false), theme), theme);
