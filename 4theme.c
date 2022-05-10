@@ -159,11 +159,15 @@ void doit(themer themer, list(var) theme) {
 int main(int argc, char** argv) {
     init(MCX);
     assert(argc >= 2, "No theme provided");
-    string path = sstr(argv[1]);
-    assert(fileExists(path), "File '%s' does not exist", argv[1]);
+    string path = str(argv[1]);
+    concat(stringInsertRange(&path, sstr("~/.config/4theme/"), 0), sstr(".theme"));
+    assert(fileExists(path), "Theme '%s' not found", argv[1]);
     list(var) theme = parseTheme(preprocess(splitR(readAllText(path), '\n'), true));
     list(string) themers = listFiles(realPath(sstr("~/.config/4theme/")), P_REG | P_FULL);
-    assert(themers.len > 0, "No themer themers found");
+    for (u i = 0; i < themers.len; i++)
+        if (!stringEndsWith(themers.items[i], sstr(".themer")))
+            stringListRemove(&themers, i--);
+    assert(themers.len > 0, "No themers found");
     for (u i = 0; i < themers.len; i++)
         doit(parseThemer(preprocess(splitR(readAllText(themers.items[i]), '\n'), false), theme), theme);
 }
